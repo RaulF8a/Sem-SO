@@ -1,0 +1,6 @@
+.idea
+ui-files
+__pycache__
+*.pdf
+*.rar
+*.zip

@@ -1,0 +1,196 @@
+from PySide6.QtWidgets import QWidget, QTableWidgetItem
+from PySide6.QtCore import QThread, QObject, Signal, Qt, QEventLoop
+from views.mainwindow import MainWindow
+from views.mainwindow import MainWindow
+from time import sleep
+from api import *
+
+class Worker(QObject):
+    finished = Signal()
+    progress = Signal(int)
+
+    def __init__(self, proceso: Proceso) -> None:
+        super().__init__()
+
+        self.proceso = proceso
+
+    def run(self) -> None:
+        for i in range(self.proceso.tiempoTranscurrido, int(self.proceso.tiempoMaximoEstimado)):
+            self.progress.emit(1)
+
+        self.finished.emit()
+
+
+class MainWindowForm(QWidget, MainWindow):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setupUi(self)
+        self.bucle = QEventLoop()
+
+        QWidget.setFocus(self)
+
+        self.poblarTablas()
+        
+        self.simularButton.clicked.connect(self.generarProcesos)
+
+    def generarProcesos(self) -> None:
+        self.simularButton.setDisabled(True)
+        self.cantidadProcesosLineEdit.setDisabled(True)
+
+        cantidad = self.cantidadProcesosLineEdit.text()
+
+        generar_lista_procesos(int(cantidad))
+
+        procesosGenerados = obtener_lista_procesos()
+
+        self.simular(procesosGenerados)
+
+    def simular(self, procesosGenerados: list) -> None:
+        # Variables
+        self.MAXIMA_CANTIDAD_PROCESOS : int = 4
+        self.MAXIMO_TIEMPO_BLOQUEADO : int = 8
+        self.PROCESO_NULO : Proceso = Proceso ("0+0", "0", "0")
+        self.procesosEnMemoria : list = []
+        self.procesosBloqueados : list = []
+        self.procesosTerminados : list = []
+        self.procesosGenerados : list = procesosGenerados
+        self.contadorGlobal : int = 0
+        self.procesoActual : Proceso
+        
+        # Cargar los primeros cuatro procesos a la lista de listos y se eliminan de los nuevos.
+        self.procesosListos = self.procesosGenerados[:4]
+        self.procesosGenerados = self.procesosGenerados[4:]
+
+        # Actualizamos la lista de prcoesos en memoria.
+        self.procesosEnMemoria = self.procesosListos.copy()
+        
+        self.procesosNuevosCountLabel.setText(str(len(procesosGenerados)))
+        self.actualizarProcesosListos(self.procesosListos)
+
+        while True:
+            self.banderaError = False
+            self.banderaInterrupcion = False
+            self.procesoActual = self.PROCESO_NULO
+
+            # Si ya no quedan procesos en la memoria, entonces terminamos el bucle.
+            if not self.procesosGenerados and not self.procesosEnMemoria:
+                break
+
+            # Cargamos el procesos actual y lo eliminamos de los listos.
+            if len(self.procesosListos) > 0:
+                self.procesoActual = self.procesosListos[0]
+                self.procesosListos.pop(0)
+
+            # Simulamos el bucle.
+            self.runLongTask
+
+    def runLongTask(self) -> None:
+        self.thread = QThread()
+        self.worker = Worker(self.procesoActual)
+
+        self.worker.moveToThread(self.thread)
+
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.worker.progress.connect(self.reportProgress)
+
+        self.thread.start()
+    
+    def reportProgress(self, n: int) -> None:
+        self.contadorGlobal += n
+        self.procesoActual.tiempoTranscurrido += n
+
+        if self.procesosGenerados:
+            self.procesosGenerados.pop()
+        if self.procesosEnMemoria:
+            self.procesosEnMemoria.pop()
+
+        self.contadorGlobalCountLabel.setText(str(self.contadorGlobal))
+        
+        self.repaint()
+
+    def poblarTablas(self) -> None:
+        self.contadorGlobalCountLabel.setText("0")
+        self.procesosNuevosCountLabel.setText("0")
+
+        column_labels_listos = ("", "ID", "T.M.E.", "T.T.", "T.R.")
+        self.procesosListosTable.setColumnCount(len(column_labels_listos))
+        self.procesosListosTable.setHorizontalHeaderLabels(column_labels_listos)
+        self.procesosListosTable.setColumnHidden(0, True)
+        self.procesosListosTable.setColumnWidth (1, 49)
+        self.procesosListosTable.setColumnWidth (2, 55)
+        self.procesosListosTable.setColumnWidth (3, 59)
+        self.procesosListosTable.setColumnWidth (4, 59)
+
+        column_labels_ejecucion = ("ID", "", "Datos")
+        self.procesoActualTable.setColumnCount(len(column_labels_ejecucion))
+        self.procesoActualTable.setHorizontalHeaderLabels(column_labels_ejecucion)
+        self.procesoActualTable.setColumnHidden(0, True)
+        self.procesoActualTable.setRowCount(6)
+        self.procesoActualTable.setItem(0, 1, QTableWidgetItem("ID"))
+        self.procesoActualTable.setItem(1, 1, QTableWidgetItem("Operacion"))
+        self.procesoActualTable.setItem(2, 1, QTableWidgetItem("Tiempo"))
+        self.procesoActualTable.setItem(3, 1, QTableWidgetItem("T. Transcurrido"))
+        self.procesoActualTable.setItem(4, 1, QTableWidgetItem("T. Restante"))
+
+        column_labels_bloqueados = ("", "ID", "T. Bloqueado")
+        self.procesosBloqueadosTable.setColumnCount(len(column_labels_bloqueados))
+        self.procesosBloqueadosTable.setHorizontalHeaderLabels(column_labels_bloqueados)
+        self.procesosBloqueadosTable.setColumnHidden(0, True)
+        self.procesosBloqueadosTable.setColumnWidth (1, 39)
+        self.procesosBloqueadosTable.setColumnWidth (2, 79)
+
+        column_labels_terminados = ("", "ID", "Operacion", "Resultado")
+        self.procesosTerminadosTable.setColumnCount(len(column_labels_terminados))
+        self.procesosTerminadosTable.setHorizontalHeaderLabels(column_labels_terminados)
+        self.procesosTerminadosTable.setColumnHidden(0, True)
+        self.procesosTerminadosTable.setColumnWidth (1, 59)
+        self.procesosTerminadosTable.setColumnWidth (3, 59)
+
+    def actualizarProcesosListos(self, procesosNuevos: list) -> None:
+        self.procesosListosTable.setRowCount(len(procesosNuevos))
+
+        for fila in range(len(procesosNuevos)):
+            self.procesosListosTable.setItem(fila, 1, QTableWidgetItem(procesosNuevos[fila].idp))
+            self.procesosListosTable.setItem(fila, 2, QTableWidgetItem(procesosNuevos[fila].tiempoMaximoEstimado))
+            self.procesosListosTable.setItem(fila, 3, QTableWidgetItem(procesosNuevos[fila].tiempoTranscurrido))
+
+    def keyPressEvent(self, event) -> None:
+        # Evaluamos el estado actual del programa, 
+        if event.key() == Qt.Key_I:
+            print("Interrupcion")
+
+        elif event.key() == Qt.Key_P:
+            print("Pausa")
+            
+        elif event.key() == Qt.Key_C:
+            print("Continuar")
+
+        elif event.key() == Qt.Key_E:
+            print("Error")
+
+        else:
+            print("Otro")
+
+def ejecutarProceso(self) -> None:
+        procesoActual: Proceso = self.procesosListos[0]
+
+        self.banderaError = False
+        self.banderaInterrupcion = False
+
+        if not procesoActual.tiempo_respuesta_calculado:
+            procesoActual.tiempo_respuesta = self.contadorGlobal - procesoActual.tiempo_llegada
+            procesoActual.tiempo_respuesta_calculado = True
+        
+        # Si el proceso no es el proceso nulo, ejecutamos.
+        if procesoActual != self.PROCESO_NULO:
+            while (procesoActual.tiempoTranscurrido < int(procesoActual.tiempoMaximoEstimado)) and (procesoActual.tiempoTranscurrido != -1):
+                procesoActual.tiempoTranscurrido += 1
+                self.contadorGlobal += 1
+
+                if self.procesosBloqueados:
+                    self.incrementarTiempoBloqueados()
+
+                self.mostrarProcesoEjecucion(procesoActual)
