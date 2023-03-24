@@ -67,10 +67,13 @@ class MainWindowForm(QWidget, MainWindow):
     def simular(self) -> None:
         if not self.cantidadProcesosLineEdit.text() or not self.quantumLineEdit.text():
             return
-
+        
         self.setFocus()
         self.generarProcesos()
 
+        if self.QUANTUM > 16:
+            return
+        
         # Cargamos los primeros cuatro procesos a la memoria.
         self.procesosEnMemoria = self.procesosNuevos[:4]
         self.procesosNuevos = self.procesosNuevos[4:]

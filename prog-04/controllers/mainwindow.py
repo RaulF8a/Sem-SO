@@ -5,7 +5,6 @@ from views.mainwindow import MainWindow
 from controllers.tabla_procesos import Tabla_Procesos_Form
 from api import *
 
-# !Falta calcular los tiempos al momento.
 class MainWindowForm(QWidget, MainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -17,7 +16,7 @@ class MainWindowForm(QWidget, MainWindow):
         self.cantidadProcesosLineEdit.setValidator(input_validator)
 
         self.bucle: QEventLoop = QEventLoop()
-        self.estadoPrograma: str = "RUNNING"
+        self.estadoPrograma: str = "INIT"
 
         # Variables
         self.MAXIMA_CANTIDAD_PROCESOS : int = 4
@@ -64,6 +63,7 @@ class MainWindowForm(QWidget, MainWindow):
     def simular(self) -> None:
         self.setFocus()
         self.generarProcesos()
+        self.estadoPrograma = "RUNNING"
 
         # Cargamos los primeros cuatro procesos a la memoria.
         self.procesosEnMemoria = self.procesosNuevos[:4]
@@ -146,7 +146,7 @@ class MainWindowForm(QWidget, MainWindow):
                 qDebug("Bloqueado")
                 self.incrementarTiempoBloqueados()
 
-                self.mostrarProcesoEjecucion()
+                # self.mostrarProcesoEjecucion()
                 self.mostrarProcesosBloqueados()
 
                 if self.banderaNuevo:

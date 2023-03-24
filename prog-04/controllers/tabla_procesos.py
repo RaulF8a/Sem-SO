@@ -35,7 +35,7 @@ class Tabla_Procesos_Form(QDialog, TablaProcesos):
                 proceso.tiempo_espera = str(self.contadorAlMomento - int(proceso.tiempo_llegada) - int(proceso.tiempo_transcurrido))
                 proceso.tiempo_servicio = proceso.tiempo_transcurrido
 
-                print (f"Contador: {self.contadorAlMomento} E + S: {proceso.tiempo_espera + proceso.tiempo_servicio}")
+                print (f"Contador: {self.contadorAlMomento} E: {proceso.tiempo_espera}  S: {proceso.tiempo_servicio} L: {proceso.tiempo_llegada}")
                 
 
     def poblarTabla(self) -> None:
@@ -62,12 +62,17 @@ class Tabla_Procesos_Form(QDialog, TablaProcesos):
             else:
                 self.tablaProcesosTable.setItem(fila, 12, QTableWidgetItem("N/A"))
             
-            self.tablaProcesosTable.setItem(fila, 13, QTableWidgetItem(self.listaProcesos[fila].tiempo_restante))
+            if self.listaProcesos[fila].estado != "Terminado":
+                self.tablaProcesosTable.setItem(fila, 13, QTableWidgetItem(self.listaProcesos[fila].tiempo_restante))
+            else:
+                self.tablaProcesosTable.setItem(fila, 13, QTableWidgetItem("N/A"))
 
-            self.tablaProcesosTable.setEditTriggers(self.tablaProcesosTable.NoEditTriggers)
-            self.tablaProcesosTable.setFocusPolicy(Qt.NoFocus)
-            self.tablaProcesosTable.horizontalScrollBar().setStyleSheet("background: lightGray")
-            self.tablaProcesosTable.verticalScrollBar().setStyleSheet("background: lightGray")
+        self.tablaProcesosTable.setColumnWidth(12, 130)
+        self.tablaProcesosTable.setColumnWidth(13, 130)
+        self.tablaProcesosTable.setEditTriggers(self.tablaProcesosTable.NoEditTriggers)
+        self.tablaProcesosTable.setFocusPolicy(Qt.NoFocus)
+        self.tablaProcesosTable.horizontalScrollBar().setStyleSheet("background: lightGray")
+        self.tablaProcesosTable.verticalScrollBar().setStyleSheet("background: lightGray")
 
     def keyPressEvent(self, event) -> None:
         if event.key() == Qt.Key_C:
