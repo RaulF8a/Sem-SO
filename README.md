@@ -10,3 +10,7 @@ prog-03: Algoritmo FCFS.
 prog-04: Algoritmo FCFS continuación.
 <br>
 prog-05: Algoritmo Round-Robin.
+<br>
+prog-06: Paginación Simple.
+<br>
+productor-consumidor: Simulación del problema de la concurrencia "Productor - Consumidor".
