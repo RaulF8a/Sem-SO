@@ -5,10 +5,11 @@ from views.mainwindow import MainWindow
 from Productor import Productor
 from Consumidor import Consumidor
 import os.path
+import sys
 import random as rd
 
 class MainWindowForm(QWidget, MainWindow):
-    def __init__(self) -> None:
+    def __init__(self) -> None:    
         super().__init__()
         self.setupUi(self)
         self.cargarImagenesPC()
@@ -249,4 +250,7 @@ class MainWindowForm(QWidget, MainWindow):
             qDebug("Terminar")
 
             self.deleteLater()
+
+            sys.exit()
+           
             
