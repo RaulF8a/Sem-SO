@@ -109,7 +109,7 @@ class MainWindowForm(QWidget, MainWindow):
                 self.cargarMemoria()
 
                 if self.procesosNuevos:
-                    self.sizeSiguienteLabel.setText(f"Siguiente: {self.procesosNuevos[0].frames} frames")
+                    self.sizeSiguienteLabel.setText(f"ID: {self.procesoActual.idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
 
                 if self.procesoActual == self.PROCESO_NULO:
                     break
@@ -151,7 +151,7 @@ class MainWindowForm(QWidget, MainWindow):
                     self.cargarMemoria()
                     self.procesosNuevosCountLabel.setText(str(len(self.procesosNuevos)))
                     if self.procesosNuevos:
-                        self.sizeSiguienteLabel.setText(f"Siguiente: {self.procesosNuevos[0].frames} frames")
+                        self.sizeSiguienteLabel.setText(f"ID: {self.procesoActual.idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
                     self.mostrarProcesosListos()
                     
                     self.estadoPrograma = "RUNNING"
@@ -176,7 +176,7 @@ class MainWindowForm(QWidget, MainWindow):
                     self.cargarMemoria()
                     self.procesosNuevosCountLabel.setText(str(len(self.procesosNuevos)))
                     if self.procesosNuevos:
-                        self.sizeSiguienteLabel.setText(f"Siguiente: {self.procesosNuevos[0].frames} frames")
+                        self.sizeSiguienteLabel.setText(f"ID: {self.procesosNuevos[0].idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
                     self.mostrarProcesosListos()
                     
                     self.estadoPrograma = "RUNNING"

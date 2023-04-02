@@ -233,7 +233,8 @@ class MainWindow(object):
         self.memoriaTableLabel.setAlignment(Qt.AlignCenter)
         self.sizeSiguienteLabel = QLabel(self.frame)
         self.sizeSiguienteLabel.setObjectName(u"sizeSiguienteLabel")
-        self.sizeSiguienteLabel.setGeometry(QRect(440, 180, 158, 31))
+        self.sizeSiguienteLabel.setGeometry(QRect(440, 170, 158, 41))
+        self.sizeSiguienteLabel.setAlignment(Qt.AlignCenter)
         self.sizeSiguienteLabel.setStyleSheet(u"font: 700 12pt \"Segoe UI\";\n"
 "color: white;")
         self.cantidadProcesosLabel.raise_()
@@ -290,6 +291,6 @@ class MainWindow(object):
         self.quantumLabel.setText(QCoreApplication.translate("Form", u"Quantum", None))
         self.decoracion_5.setText("")
         self.memoriaTableLabel.setText(QCoreApplication.translate("Form", u"Memoria", None))
-        self.sizeSiguienteLabel.setText(QCoreApplication.translate("Form", u"Siguiente: ", None))
+        self.sizeSiguienteLabel.setText(QCoreApplication.translate("Form", u"", None))
     # retranslateUi
 
