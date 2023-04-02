@@ -7,7 +7,6 @@ from api import *
 from Frame import *
 import os.path
 
-#! Mostrar el tamaño del proceso al tope de la lista de nuevos.
 class MainWindowForm(QWidget, MainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -110,7 +109,7 @@ class MainWindowForm(QWidget, MainWindow):
                 self.cargarMemoria()
 
                 if self.procesosNuevos:
-                    self.sizeSiguienteLabel.setText(f"Siguiente: {self.procesosNuevos[0].tamanio} frames")
+                    self.sizeSiguienteLabel.setText(f"Siguiente: {self.procesosNuevos[0].frames} frames")
 
                 if self.procesoActual == self.PROCESO_NULO:
                     break
@@ -152,7 +151,7 @@ class MainWindowForm(QWidget, MainWindow):
                     self.cargarMemoria()
                     self.procesosNuevosCountLabel.setText(str(len(self.procesosNuevos)))
                     if self.procesosNuevos:
-                        self.sizeSiguienteLabel.setText(f"Siguiente: {self.procesosNuevos[0].tamanio} frames")
+                        self.sizeSiguienteLabel.setText(f"Siguiente: {self.procesosNuevos[0].frames} frames")
                     self.mostrarProcesosListos()
                     
                     self.estadoPrograma = "RUNNING"
@@ -177,7 +176,7 @@ class MainWindowForm(QWidget, MainWindow):
                     self.cargarMemoria()
                     self.procesosNuevosCountLabel.setText(str(len(self.procesosNuevos)))
                     if self.procesosNuevos:
-                        self.sizeSiguienteLabel.setText(f"Siguiente: {self.procesosNuevos[0].tamanio} frames")
+                        self.sizeSiguienteLabel.setText(f"Siguiente: {self.procesosNuevos[0].frames} frames")
                     self.mostrarProcesosListos()
                     
                     self.estadoPrograma = "RUNNING"
