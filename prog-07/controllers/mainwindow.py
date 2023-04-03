@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QWidget, QTableWidgetItem
 from PySide6.QtCore import Qt, QEventLoop, QTime, QCoreApplication, QRegularExpression, qDebug
 from PySide6.QtGui import QRegularExpressionValidator, QPixmap
+from types import SimpleNamespace
 from views.mainwindow import MainWindow
 from controllers.tabla_procesos import Tabla_Procesos_Form
 from api import *
@@ -52,6 +53,7 @@ class MainWindowForm(QWidget, MainWindow):
         self.banderaInterrupcion = False
         self.banderaNuevo = False
         self.banderaTerminadoQuantum = False
+        self.banderaSuspendido = False
 
         self.setFocus()
 
@@ -304,6 +306,24 @@ class MainWindowForm(QWidget, MainWindow):
 
     def cargarMemoria(self) -> None:
         contador = len(self.procesosNuevos)
+        
+        if self.banderaSuspendido and (int(self.procesosSuspendidos[0].frames) <= self.cantidadFramesDisponibles()):
+            qDebug("Regresar suspendido desde cargar memoria")
+            auxProceso = self.procesosSuspendidos[0]
+            self.procesosSuspendidos.remove(auxProceso)
+
+            auxProceso.estado = "Listo"
+            self.llenarFrames(int(auxProceso.tamanio), int(auxProceso.frames), auxProceso.idp, auxProceso.estado)
+            self.procesosListos.append(auxProceso)
+
+            self.banderaSuspendido = False
+
+            self.suspendidosCountLabel.setText(str(len(self.procesosSuspendidos)))
+            
+            if not self.procesosSuspendidos:
+                self.siguienteSuspendidoLabel.setText("")
+            else:
+                self.siguienteSuspendidoLabel.setText(f"ID: {self.procesosSuspendidos[0].idp}\nTamaño: {self.procesosSuspendidos[0].frames} frames")
 
         if not self.memoriaLlena() and self.procesosNuevos:
             # for i in range(len(self.procesosNuevos)):
@@ -566,16 +586,28 @@ class MainWindowForm(QWidget, MainWindow):
             if self.procesosBloqueados:
                 self.cargarArchivo()
 
+                self.suspendidosCountLabel.setText(str(len(self.procesosSuspendidos)))
+                self.siguienteSuspendidoLabel.setText(f"ID: {self.procesosSuspendidos[0].idp}\nTamaño: {self.procesosSuspendidos[0].frames} frames")
+
         elif event.key() == Qt.Key_R and self.estadoPrograma == "RUNNING" and self.procesosSuspendidos:
             print("Regresar Suspendido")
+
+            self.recuperarArchivo()
+
+            self.suspendidosCountLabel.setText(str(len(self.procesosSuspendidos)))
+            
+            if not self.procesosSuspendidos:
+                self.siguienteSuspendidoLabel.setText("")
+            else:
+                self.siguienteSuspendidoLabel.setText(f"ID: {self.procesosSuspendidos[0].idp}\nTamaño: {self.procesosSuspendidos[0].frames} frames")
 
         else:
             print("Otro")
 
     def cargarArchivo(self) -> None:
+        self.procesosBloqueados[0].estado = "Suspendido"
         auxProcesoSuspendido: dict = vars(self.procesosBloqueados[0])
         banderaContenido = False
-        # Eliminamos el proceso de la lista de bloqueados.
 
         with open("suspendidos.json", "r") as file:
             file.seek(0, os.SEEK_END)
@@ -602,12 +634,32 @@ class MainWindowForm(QWidget, MainWindow):
 
         self.procesosBloqueados.remove(self.procesosBloqueados[0])
 
+    def recuperarArchivo(self) -> None:
+        with open("suspendidos.json", "r") as file:
+            procesos: list[dict] = json.load(file)
+        
+        procesos.pop(0)
+
+        # Si aun quedan procesos, los volvemos a poner en el archivo.
+        if procesos:
+            with open("suspendidos.json", "w") as file:
+                json.dump(procesos, file, indent=4)
+        
+        if self.cantidadFramesDisponibles() < int(self.procesosSuspendidos[0].frames):
+            self.banderaSuspendido = True
+            qDebug("No hay espacio para que el proceso regrese. Colocado al tope de la cola.")
+            return
+        
+        auxProceso: Proceso = self.procesosSuspendidos[0]
+        self.procesosSuspendidos.remove(auxProceso)
+
+        auxProceso.estado = "Listo"
+        self.llenarFrames(int(auxProceso.tamanio), int(auxProceso.frames), auxProceso.idp, auxProceso.estado)
+        self.procesosListos.append(auxProceso)
+
     def limpiarArchivo(self) -> None:
         with open("suspendidos.json", "w") as file:
             file.write("")
-        # if os.path.exists(os.path.dirname(__file__)+"/../suspendidos.json"):
-        # else:
-        #     return
 
     def abrirTabla(self) -> None:
         self.dialog = Tabla_Procesos_Form()
