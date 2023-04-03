@@ -6,6 +6,7 @@ from controllers.tabla_procesos import Tabla_Procesos_Form
 from api import *
 from Frame import *
 import os.path
+import json
 
 class MainWindowForm(QWidget, MainWindow):
     def __init__(self) -> None:
@@ -38,7 +39,10 @@ class MainWindowForm(QWidget, MainWindow):
         self.procesosTerminados : list[Proceso] = []
         self.procesosListos: list[Proceso] = []
         self.procesosNuevos : list[Proceso] = []
-        
+
+        self.procesosSuspendidos: list[Proceso] = []
+        self.limpiarArchivo()
+
         self.procesoActual: Proceso
         self.contadorGlobal : int = 0
         self.memoria: list[Frame] = []
@@ -105,11 +109,13 @@ class MainWindowForm(QWidget, MainWindow):
             # Mostramos los procesos nuevos que quedan.
             self.procesosNuevosCountLabel.setText(str(len(self.procesosNuevos)))
 
+            self.suspendidosCountLabel.setText(str(len(self.procesosSuspendidos)))
+
             while True:
                 self.cargarMemoria()
 
                 if self.procesosNuevos:
-                    self.sizeSiguienteLabel.setText(f"ID: {self.procesosNuevos[0].idp}\nTamaño: {self.procesosNuevos[0].frames} frames")
+                    self.sizeSiguienteLabel.setText(f"ID: {self.procesoActual.idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
 
                 if self.procesoActual == self.PROCESO_NULO:
                     break
@@ -151,7 +157,7 @@ class MainWindowForm(QWidget, MainWindow):
                     self.cargarMemoria()
                     self.procesosNuevosCountLabel.setText(str(len(self.procesosNuevos)))
                     if self.procesosNuevos:
-                        self.sizeSiguienteLabel.setText(f"ID: {self.procesosNuevos[0].idp}\nTamaño: {self.procesosNuevos[0].frames} frames")
+                        self.sizeSiguienteLabel.setText(f"ID: {self.procesoActual.idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
                     self.mostrarProcesosListos()
                     
                     self.estadoPrograma = "RUNNING"
@@ -176,7 +182,7 @@ class MainWindowForm(QWidget, MainWindow):
                     self.cargarMemoria()
                     self.procesosNuevosCountLabel.setText(str(len(self.procesosNuevos)))
                     if self.procesosNuevos:
-                        self.sizeSiguienteLabel.setText(f"ID: {self.procesosNuevos[0].idp}\nTamaño: {self.procesosNuevos[0].frames} frames")
+                        self.sizeSiguienteLabel.setText(f"ID: {self.procesosNuevos[0].idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
                     self.mostrarProcesosListos()
                     
                     self.estadoPrograma = "RUNNING"
@@ -300,6 +306,9 @@ class MainWindowForm(QWidget, MainWindow):
         contador = len(self.procesosNuevos)
 
         if not self.memoriaLlena() and self.procesosNuevos:
+            # for i in range(len(self.procesosNuevos)):
+            #     qDebug(f"{str(self.procesosNuevos[i])}")
+
             while True:
                 auxProceso: Proceso = self.procesosNuevos[0]
                 # Se asigna el tiempo de llegada al proceso que entro al sistema.
@@ -307,9 +316,6 @@ class MainWindowForm(QWidget, MainWindow):
                 auxProceso.tiempo_transcurrido = "0"
                 auxProceso.tiempo_restante = self.procesosNuevos[0].tiempo_maximo_estimado
 
-                # qDebug(f"\nFrames Requeridos: {auxProceso.frames}")
-                # qDebug(f"Frames Disponibles: {self.cantidadFramesDisponibles()}")
-                
                 if (int(auxProceso.frames) <= self.cantidadFramesDisponibles()):
                     auxProceso.estado = "Listo"
 
@@ -325,7 +331,7 @@ class MainWindowForm(QWidget, MainWindow):
                     break
                 
                 contador -= 1
-       
+        
         self.mostrarMemoria()
         self.sizeSiguienteLabel.setText("")
 
@@ -397,6 +403,7 @@ class MainWindowForm(QWidget, MainWindow):
     def poblarTablas(self) -> None:
         self.contadorGlobalCountLabel.setText("0")
         self.procesosNuevosCountLabel.setText("0")
+        self.suspendidosCountLabel.setText("0")
 
         column_labels_listos = ("", "ID", "T.M.E.", "T.T.", "T.R.")
         self.procesosListosTable.setColumnCount(len(column_labels_listos))
@@ -553,8 +560,54 @@ class MainWindowForm(QWidget, MainWindow):
 
             self.bucle.exec()
 
+        elif event.key() == Qt.Key_S and self.estadoPrograma == "RUNNING":
+            print("Suspender")
+
+            if self.procesosBloqueados:
+                self.cargarArchivo()
+
+        elif event.key() == Qt.Key_R and self.estadoPrograma == "RUNNING" and self.procesosSuspendidos:
+            print("Regresar Suspendido")
+
         else:
             print("Otro")
+
+    def cargarArchivo(self) -> None:
+        auxProcesoSuspendido: dict = vars(self.procesosBloqueados[0])
+        banderaContenido = False
+        # Eliminamos el proceso de la lista de bloqueados.
+
+        with open("suspendidos.json", "r") as file:
+            file.seek(0, os.SEEK_END)
+
+            if file.tell():
+                file.seek(0)
+                banderaContenido = True
+                d = json.load(file)
+
+        if banderaContenido:
+            with open("suspendidos.json", "w") as file:
+                lista = [auxProcesoSuspendido]
+                d.extend(lista)
+
+                json.dump(d, file, indent=4)
+        else:
+            with open("suspendidos.json", "w") as file:
+                lista = [auxProcesoSuspendido]
+                json.dump(lista, file, indent=4)
+
+        # Falta sacar de la memoria los procesos.
+        self.liberarFrames(self.procesosBloqueados[0].idp)
+        self.procesosSuspendidos.append(self.procesosBloqueados[0])
+
+        self.procesosBloqueados.remove(self.procesosBloqueados[0])
+
+    def limpiarArchivo(self) -> None:
+        with open("suspendidos.json", "w") as file:
+            file.write("")
+        # if os.path.exists(os.path.dirname(__file__)+"/../suspendidos.json"):
+        # else:
+        #     return
 
     def abrirTabla(self) -> None:
         self.dialog = Tabla_Procesos_Form()
