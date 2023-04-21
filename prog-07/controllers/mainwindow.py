@@ -16,7 +16,6 @@ class MainWindowForm(QWidget, MainWindow):
 
         self.setWindowIcon(QPixmap(os.path.dirname(__file__)+"/../icon.png"))
 
-        # Validar que no se ingresen letras en la cantidad de procesos.
         regEx = QRegularExpression("[1-9]+")
         input_validator = QRegularExpressionValidator(regEx)
         self.cantidadProcesosLineEdit.setValidator(input_validator)
@@ -26,15 +25,12 @@ class MainWindowForm(QWidget, MainWindow):
         self.estadoPrograma: str = "RUNNING"
 
         # Constantes
-        self.MAXIMA_CANTIDAD_PROCESOS : int = 4
         self.MAXIMO_TIEMPO_BLOQUEADO : int = 8
         self.PROCESO_NULO : Proceso = Proceso ("0+0", "0", "0")
         self.PROCESO_NULO.tiempo_transcurrido = "0"
         self.QUANTUM: int = 0
         self.PAGINAS_POR_FRAME = 5
         self.CANTIDAD_TOTAL_FRAMES = 40
-
-        self.procesosEnMemoria : list[Proceso] = []
 
         self.procesosBloqueados : list[Proceso] = []
         self.procesosTerminados : list[Proceso] = []
@@ -54,6 +50,7 @@ class MainWindowForm(QWidget, MainWindow):
         self.banderaNuevo = False
         self.banderaTerminadoQuantum = False
         self.banderaSuspendido = False
+        self.banderaRegresoSuspendido = False
 
         self.setFocus()
 
@@ -96,19 +93,17 @@ class MainWindowForm(QWidget, MainWindow):
 
             self.procesoActual = self.PROCESO_NULO
 
-            # Si ya no quedan procesos en la memoria, entonces terminamos el bucle.
-            if not self.procesosNuevos and self.cantidadFramesDisponibles() == 38:
+            if not self.procesosNuevos and self.cantidadFramesDisponibles() == 38 and not self.procesosSuspendidos:
                 break
 
-            # Cargamos el procesos actual y lo eliminamos de los listos.
             if len(self.procesosListos) > 0:
                 self.procesoActual: Proceso = self.procesosListos[0]
                 self.procesosListos.pop(0)
             
+            qDebug(f"ProcesoActual: {str(self.procesoActual)}")
             self.mostrarProcesosListos()
             self.mostrarProcesosBloqueados()
 
-            # Mostramos los procesos nuevos que quedan.
             self.procesosNuevosCountLabel.setText(str(len(self.procesosNuevos)))
 
             self.suspendidosCountLabel.setText(str(len(self.procesosSuspendidos)))
@@ -117,16 +112,35 @@ class MainWindowForm(QWidget, MainWindow):
                 self.cargarMemoria()
 
                 if self.procesosNuevos:
-                    self.sizeSiguienteLabel.setText(f"ID: {self.procesoActual.idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
+                    self.sizeSiguienteLabel.setText(f"ID: {self.procesosNuevos[0].idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
 
                 if self.procesoActual == self.PROCESO_NULO:
-                    break
+                    # Ya no hay procesos en memoria. Solo quedan los suspendidos.
+                    if self.procesosSuspendidos and (not self.procesosNuevos and self.cantidadFramesDisponibles() == 38):
+                        self.mostrarProcesoEjecucion()
+
+                        if self.banderaNuevo:
+                            self.banderaNuevo = False
+
+                            self.cargarMemoria()
+                            self.procesosNuevosCountLabel.setText(str(len(self.procesosNuevos)))
+                            if self.procesosNuevos:
+                                self.sizeSiguienteLabel.setText(f"ID: {self.procesosNuevos[0].idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
+                            self.mostrarProcesosListos()
+                            
+                            self.estadoPrograma = "RUNNING"
+
+                        self.contadorGlobal += 1
+                        self.contadorGlobalCountLabel.setText(str(self.contadorGlobal))
+
+                        self.delay()
+                        continue
+                    else:
+                        break
                 
-                # Verificamos si ya termino su ejecucion.
                 if int(self.procesoActual.tiempo_transcurrido) == int(self.procesoActual.tiempo_maximo_estimado):
                     break
 
-                # Verificamos si se termino su quantum.
                 if int(self.procesoActual.quantum_transcurrido) == self.QUANTUM:
                     self.banderaTerminadoQuantum = True
                     self.procesoActual.quantum_transcurrido = "0"
@@ -139,16 +153,13 @@ class MainWindowForm(QWidget, MainWindow):
                 self.mostrarProcesosBloqueados()
                 self.contadorGlobalCountLabel.setText(str(self.contadorGlobal))
 
-                # Verificamos si el tiempo de respuesta ya ha sido calculado para el proceso actual.
                 if not self.procesoActual.tiempo_respuesta_calculado:
                     self.procesoActual.tiempo_respuesta = str(self.contadorGlobal - int(self.procesoActual.tiempo_llegada))
                     self.procesoActual.tiempo_respuesta_calculado = True
                 
-                # Si hay procesos en bloqueado, se aumenta su tiempo.
                 if self.procesosBloqueados:
                     self.incrementarTiempoBloqueados()
 
-                # Si las teclas activaron alguna de las banderas, terminamos el bucle de ejecucion.
                 if self.banderaInterrupcion or self.banderaError:
                     self.limpiar()
                     break
@@ -159,7 +170,7 @@ class MainWindowForm(QWidget, MainWindow):
                     self.cargarMemoria()
                     self.procesosNuevosCountLabel.setText(str(len(self.procesosNuevos)))
                     if self.procesosNuevos:
-                        self.sizeSiguienteLabel.setText(f"ID: {self.procesoActual.idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
+                        self.sizeSiguienteLabel.setText(f"ID: {self.procesosNuevos[0].idp}\nSiguiente: {self.procesosNuevos[0].frames} frames")
                     self.mostrarProcesosListos()
                     
                     self.estadoPrograma = "RUNNING"
@@ -171,6 +182,10 @@ class MainWindowForm(QWidget, MainWindow):
                 self.contadorGlobal += 1
 
                 self.delay()
+
+            if self.banderaRegresoSuspendido:
+                self.banderaRegresoSuspendido = False
+                continue
 
             if self.procesosBloqueados and self.procesoActual == self.PROCESO_NULO:
                 self.incrementarTiempoBloqueados()
@@ -196,33 +211,24 @@ class MainWindowForm(QWidget, MainWindow):
                 continue
             
             if not self.banderaInterrupcion:
-                # Si el tiempo transcurrido es igual al estimado, entonces el proceso ya termino su ejecucion.
                 if int(self.procesoActual.tiempo_transcurrido) == int(self.procesoActual.tiempo_maximo_estimado):
-                    # Evaluamos si se termino normalmente o fue por un error.
                     if not self.banderaError:
                         self.procesoActual.resultado = self.realizarOperacion(self.procesoActual.operacion)
-                        # Asignamos el tiempo de servicio.
                         self.procesoActual.tiempo_servicio = self.procesoActual.tiempo_maximo_estimado
                     else:
                         self.banderaError = False
                         self.procesoActual.tiempo_servicio = self.procesoActual.aux_tiempo_servicio
 
-                    # Asignamos el tiempo de finalizacion.
                     self.procesoActual.tiempo_finalizacion = str(self.contadorGlobal)
-                    # Asignamos el tiempo de retorno del proceso actual.
                     self.procesoActual.tiempo_retorno = str(self.contadorGlobal - int(self.procesoActual.tiempo_llegada))
                     self.procesoActual.tiempo_espera = str(int(self.procesoActual.tiempo_retorno) - int(self.procesoActual.tiempo_servicio))
                     
                     self.procesosTerminados.append(self.procesoActual)
                     
                     self.liberarFrames(self.procesoActual.idp)
-                    # # Eliminamos el proceso actual de la memoria.
-                    # self.procesosEnMemoria.remove(self.procesoActual)
 
-                    # Ponemos su estado en Terminado.
                     self.procesoActual.estado = "Terminado"
             else:
-                # Si se activo la bandera de interrupcion, el proceso esta bloqueado.
                 self.banderaInterrupcion = False
                 self.cambiarEstadoProceso(self.procesoActual.idp, "Bloqueado")
                 self.procesoActual.estado = "Bloqueado"
@@ -326,9 +332,6 @@ class MainWindowForm(QWidget, MainWindow):
                 self.siguienteSuspendidoLabel.setText(f"ID: {self.procesosSuspendidos[0].idp}\nTamaño: {self.procesosSuspendidos[0].frames} frames")
 
         if not self.memoriaLlena() and self.procesosNuevos:
-            # for i in range(len(self.procesosNuevos)):
-            #     qDebug(f"{str(self.procesosNuevos[i])}")
-
             while True:
                 auxProceso: Proceso = self.procesosNuevos[0]
                 # Se asigna el tiempo de llegada al proceso que entro al sistema.
@@ -654,6 +657,7 @@ class MainWindowForm(QWidget, MainWindow):
         self.procesosSuspendidos.remove(auxProceso)
 
         auxProceso.estado = "Listo"
+        self.banderaRegresoSuspendido = True
         self.llenarFrames(int(auxProceso.tamanio), int(auxProceso.frames), auxProceso.idp, auxProceso.estado)
         self.procesosListos.append(auxProceso)
 
@@ -665,4 +669,3 @@ class MainWindowForm(QWidget, MainWindow):
         self.dialog = Tabla_Procesos_Form()
 
         self.dialog.exec_()
-

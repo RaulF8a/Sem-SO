@@ -13,4 +13,6 @@ prog-05: Algoritmo Round-Robin.
 <br>
 prog-06: Paginación Simple.
 <br>
+prog-07: Procesos Suspendidos.
+<br>
 productor-consumidor: Simulación del problema de la concurrencia "Productor - Consumidor".

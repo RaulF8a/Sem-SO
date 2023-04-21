@@ -1,4 +1,5 @@
 import random as rd
+from math import floor
 
 class Proceso:
     def __init__(self, operacion: str, tiempo_maximo_estimado: str, idp: str, estado="Nuevo", resultado="0") -> None:
@@ -7,7 +8,7 @@ class Proceso:
         self._idp = idp
         self._estado = estado
         self._tamanio = str(rd.randint(6,25))
-        self._frames = str(round(int(self._tamanio) / 5 + (0 if int(self._tamanio) % 5 == 0 else 1)))
+        self._frames = self.calcularFrames()
 
         # Tiempos
         self._tiempo_maximo_estimado = tiempo_maximo_estimado
@@ -26,6 +27,14 @@ class Proceso:
         self._quantum_transcurrido = "0"
         self._aux_tiempo_servicio = "0"
         self._tiempo_respuesta_calculado = False
+
+    def calcularFrames(self) -> int:
+        frames = floor((int(self._tamanio) / 5))
+
+        if int(self._tamanio) % 5 == 0:
+            return frames
+        else:
+            return frames + 1
 
     @property
     def operacion(self) -> str:
