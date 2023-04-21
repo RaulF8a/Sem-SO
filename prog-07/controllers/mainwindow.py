@@ -117,6 +117,7 @@ class MainWindowForm(QWidget, MainWindow):
                 if self.procesoActual == self.PROCESO_NULO:
                     # Ya no hay procesos en memoria. Solo quedan los suspendidos.
                     if self.procesosSuspendidos and (not self.procesosNuevos and self.cantidadFramesDisponibles() == 38):
+                        self.mostrarProcesosListos()
                         self.mostrarProcesoEjecucion()
 
                         if self.banderaNuevo:
@@ -185,6 +186,7 @@ class MainWindowForm(QWidget, MainWindow):
 
             if self.banderaRegresoSuspendido:
                 self.banderaRegresoSuspendido = False
+                self.mostrarProcesosListos()
                 continue
 
             if self.procesosBloqueados and self.procesoActual == self.PROCESO_NULO:
@@ -208,6 +210,9 @@ class MainWindowForm(QWidget, MainWindow):
                 self.contadorGlobalCountLabel.setText(str(self.contadorGlobal))
 
                 self.delay()
+                continue
+
+            if self.procesoActual == self.PROCESO_NULO:
                 continue
             
             if not self.banderaInterrupcion:
@@ -647,6 +652,8 @@ class MainWindowForm(QWidget, MainWindow):
         if procesos:
             with open("suspendidos.json", "w") as file:
                 json.dump(procesos, file, indent=4)
+        else:
+            self.limpiarArchivo()
         
         if self.cantidadFramesDisponibles() < int(self.procesosSuspendidos[0].frames):
             self.banderaSuspendido = True
@@ -656,8 +663,10 @@ class MainWindowForm(QWidget, MainWindow):
         auxProceso: Proceso = self.procesosSuspendidos[0]
         self.procesosSuspendidos.remove(auxProceso)
 
+        if not self.procesosNuevos and self.cantidadFramesDisponibles() == 38:
+            self.banderaRegresoSuspendido = True
+
         auxProceso.estado = "Listo"
-        self.banderaRegresoSuspendido = True
         self.llenarFrames(int(auxProceso.tamanio), int(auxProceso.frames), auxProceso.idp, auxProceso.estado)
         self.procesosListos.append(auxProceso)
 
