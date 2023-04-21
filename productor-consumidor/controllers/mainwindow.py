@@ -85,7 +85,7 @@ class MainWindowForm(QWidget, MainWindow):
         self.cantidadMovimientos = rd.randint(3, 7)
 
         # Turno del productor.
-        if self.turno == 1:
+        if self.turno == self.TURNO_PRODUCTOR:
             # Verificamos si el buffer no esta lleno.
             if self.productosEnBuffer() != self.LEN_BUFFER:
                 self.productor.estado = self.TRABAJANDO
@@ -197,8 +197,6 @@ class MainWindowForm(QWidget, MainWindow):
 
         self.inicializarArreglo()
 
-        qDebug(f"{self.buffer[21]}")
-
         while True:
             self.siguientesMovimientos()
 
@@ -217,7 +215,6 @@ class MainWindowForm(QWidget, MainWindow):
                             # Aumentamos la posicion actual del consumidor.
                             self.consumidor.posicionActual += 1
 
-                            # qDebug(f"Consumidor: {self.consumidor.posicionActual}")
                             # Evaluamos si ya se llego al final del buffer, para reiniciar la pos.
                             if (self.consumidor.posicionActual == self.LEN_BUFFER):
                                 self.consumidor.posicionActual = 0
