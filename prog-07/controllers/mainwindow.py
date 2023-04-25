@@ -118,6 +118,7 @@ class MainWindowForm(QWidget, MainWindow):
                     # Ya no hay procesos en memoria. Solo quedan los suspendidos.
                     if self.procesosSuspendidos and (not self.procesosNuevos and self.cantidadFramesDisponibles() == 38):
                         self.mostrarProcesosListos()
+                        self.mostrarProcesosBloqueados()
                         self.mostrarProcesoEjecucion()
 
                         if self.banderaNuevo:
@@ -133,6 +134,7 @@ class MainWindowForm(QWidget, MainWindow):
 
                         self.contadorGlobal += 1
                         self.contadorGlobalCountLabel.setText(str(self.contadorGlobal))
+                        self.incrementarTiempoEsperaSuspendidos()
 
                         self.delay()
                         continue
@@ -181,12 +183,13 @@ class MainWindowForm(QWidget, MainWindow):
 
                 self.procesoActual.quantum_transcurrido = str(int(self.procesoActual.quantum_transcurrido) + 1)
                 self.contadorGlobal += 1
+                self.incrementarTiempoEsperaSuspendidos()
 
                 self.delay()
 
             if self.banderaRegresoSuspendido:
                 self.banderaRegresoSuspendido = False
-                self.mostrarProcesosListos()
+                self.mostrarProcesosBloqueados()
                 continue
 
             if self.procesosBloqueados and self.procesoActual == self.PROCESO_NULO:
@@ -208,6 +211,7 @@ class MainWindowForm(QWidget, MainWindow):
 
                 self.contadorGlobal += 1
                 self.contadorGlobalCountLabel.setText(str(self.contadorGlobal))
+                self.incrementarTiempoEsperaSuspendidos()
 
                 self.delay()
                 continue
@@ -267,6 +271,11 @@ class MainWindowForm(QWidget, MainWindow):
         
         return framesLlenos == self.CANTIDAD_TOTAL_FRAMES - 2
 
+    def incrementarTiempoEsperaSuspendidos(self) -> None:
+        if self.procesosSuspendidos:
+            for suspendido in self.procesosSuspendidos:
+                suspendido.tiempo_espera = str(self.contadorGlobal - int(suspendido.tiempo_llegada) - int(suspendido.tiempo_transcurrido))
+
     def cantidadFramesDisponibles(self) -> int:
         framesDisponibles: int = 0
 
@@ -323,9 +332,9 @@ class MainWindowForm(QWidget, MainWindow):
             auxProceso = self.procesosSuspendidos[0]
             self.procesosSuspendidos.remove(auxProceso)
 
-            auxProceso.estado = "Listo"
+            auxProceso.estado = "Bloqueado"
             self.llenarFrames(int(auxProceso.tamanio), int(auxProceso.frames), auxProceso.idp, auxProceso.estado)
-            self.procesosListos.append(auxProceso)
+            self.procesosBloqueados.append(auxProceso)
 
             self.banderaSuspendido = False
 
@@ -603,6 +612,7 @@ class MainWindowForm(QWidget, MainWindow):
             self.recuperarArchivo()
 
             self.suspendidosCountLabel.setText(str(len(self.procesosSuspendidos)))
+            self.mostrarProcesosListos()
             
             if not self.procesosSuspendidos:
                 self.siguienteSuspendidoLabel.setText("")
@@ -614,6 +624,9 @@ class MainWindowForm(QWidget, MainWindow):
 
     def cargarArchivo(self) -> None:
         self.procesosBloqueados[0].estado = "Suspendido"
+        self.procesosBloqueados[0].tiempo_espera = str(self.contadorGlobal - int(self.procesosBloqueados[0].tiempo_llegada) - int(self.procesosBloqueados[0].tiempo_transcurrido))
+        self.procesosBloqueados[0].tiempo_servicio = self.procesosBloqueados[0].tiempo_transcurrido
+
         auxProcesoSuspendido: dict = vars(self.procesosBloqueados[0])
         banderaContenido = False
 
@@ -666,9 +679,9 @@ class MainWindowForm(QWidget, MainWindow):
         if not self.procesosNuevos and self.cantidadFramesDisponibles() == 38:
             self.banderaRegresoSuspendido = True
 
-        auxProceso.estado = "Listo"
+        auxProceso.estado = "Bloqueado"
         self.llenarFrames(int(auxProceso.tamanio), int(auxProceso.frames), auxProceso.idp, auxProceso.estado)
-        self.procesosListos.append(auxProceso)
+        self.procesosBloqueados.append(auxProceso)
 
     def limpiarArchivo(self) -> None:
         with open("suspendidos.json", "w") as file:
